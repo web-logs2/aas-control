@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<head>
+    <style>
+        main {
+            margin: auto;
+			width: 80%;
+			max-width: 800px;
+        }
+        footer {
+            margin: auto;
+			width: 80%;
+			max-width: 800px;
+        }
+    </style>
+</head>
+<main>
+	<h2>AAS实例已创建</h2>
+	<p><strong>请注意：当前版本为试用版，实例有效期${DURATION_HOURS}小时</strong></p>
+	<p>以下是您的AAS实例相关信息：</p>
+	<ul>
+		<li><strong>URL: </strong><p>http://aas-control.openanolis.cn/${USER_NO}</p></li>
+		<li><strong>认证密钥: </strong><br/>
+			<code style="white-space: pre-wrap;">${AUTH_KEY}</code>
+		</li>
+	</ul>
+    <p>（<strong>注: </strong>请妥善记录并保存认证密钥，以在配置AAS实例和设置验证策略时以认证身份）</p>
+    <br/>
+    <p>龙蜥社区提供了用于配置与测试AAS实例的Client命令行工具<br/>
+	以下是AAS Client工具下载地址、使用方法指引文档的链接：</p>
+	<ul>
+		<li><a href="/aas-client" download="aas-client.tar.gz">Download AAS Client Tool</a></li>
+		<li><a href="/guide">AAS配置与测试指引</a></li>
+	</ul>
+</main>
+<br/>
+
+<footer>
+	<p>&copy; 2023 OpenAnolis</p>
+</footer>

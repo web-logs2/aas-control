@@ -1,0 +1,59 @@
+version: '3.2'
+services:
+  kbs:
+    env_file: .env
+    image: ghcr.io/confidential-containers/key-broker-service:v0.6.0
+    container_name: kbs-${USER_NO}
+    command: [
+        "/usr/local/bin/kbs",
+        "--socket",
+        "0.0.0.0:${KBS_PORT}",
+        "--config",
+        "/etc/kbs-config.json",
+        "--auth-public-key",
+        "/opt/confidential-containers/kbs/user-keys/public.pub",
+        "--insecure-http"
+      ]
+    restart: always # keep the server running
+    ports:
+      - "${KBS_PORT}:${KBS_PORT}"
+    volumes:
+      - /opt/aas-control/${USER_NO}/repository:/opt/confidential-containers/kbs/repository:rw
+      - /opt/aas-control/${USER_NO}/public.pub:/opt/confidential-containers/kbs/user-keys/public.pub
+      - /opt/aas-control/${USER_NO}/kbs-config.json:/etc/kbs-config.json
+
+  as:
+    env_file: .env
+    image: xinjian1326/attestation-service:latest
+    container_name: as-${USER_NO}
+    ports:
+    - "${AS_PORT}:${AS_PORT}"
+    restart: always
+    volumes:
+      - /opt/aas-control/${USER_NO}/attestation-service:/opt/confidential-containers/attestation-service:rw
+      - /opt/aas-control/${USER_NO}/as-config.json:/etc/as-config.json:rw
+      - /opt/aas-control/${USER_NO}/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf:rw
+    command: [
+      "grpc-as",
+      "--socket",
+      "0.0.0.0:${AS_PORT}",
+      "--rvps-address",
+      "http://rvps:${RVPS_PORT}",
+      "--config",
+      "/etc/as-config.json"
+    ]
+
+  rvps:
+    env_file: .env
+    image: ghcr.io/confidential-containers/reference-value-provider-service:v0.6.0
+    container_name: rvps-${USER_NO}
+    command: [
+        "/usr/local/bin/rvps",
+        "--socket",
+        "0.0.0.0:${RVPS_PORT}",
+      ]
+    restart: always # keep the server running
+    ports:
+      - "${RVPS_PORT}:${RVPS_PORT}"
+    volumes:
+      - /opt/aas-control/${USER_NO}/attestation-service/reference-values:/opt/confidential-containers/attestation-service/reference_values:rw
