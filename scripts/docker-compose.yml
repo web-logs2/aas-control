@@ -2,7 +2,7 @@ version: '3.2'
 services:
   kbs:
     env_file: .env
-    image: ghcr.io/confidential-containers/key-broker-service:v0.6.0
+    image: xinjian1326/kbs:aas-1.0
     container_name: kbs-${USER_NO}
     command: [
         "/usr/local/bin/kbs",
@@ -24,7 +24,7 @@ services:
 
   as:
     env_file: .env
-    image: xinjian1326/attestation-service:latest
+    image: xinjian1326/as:aas-1.0
     container_name: as-${USER_NO}
     ports:
     - "${AS_PORT}:${AS_PORT}"

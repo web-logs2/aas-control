@@ -6,7 +6,7 @@ use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
 
 use crate::session::SessionMap;
-use api::{download_aas_client, redirect, start, get_guide};
+use api::*;
 use cleanup::cleanup;
 use std::path::Path;
 use tokio::time::{sleep, Duration};
@@ -19,7 +19,7 @@ mod session;
 
 // User OSS login related consts
 pub const OSS_PROVIDER_URL: &str = "https://passport.openanolis.cn/login";
-pub const CALL_BACK_URL: &str = "http%3A%2F%2Faas-control.openanolis.cn%2Fredirect";
+pub const CALL_BACK_URL: &str = "http%3A%2F%2Fattestation.openanolis.cn%2Fredirect";
 pub const USER_INFO_API_URL: &str = "https://epoint.openanolis.cn/common/ucenter/verifyToken.json";
 // pub const SERVER_KEY: &str = "456789";
 pub const SERVER_KEY: &str = "kArXcY4q";
@@ -33,10 +33,9 @@ pub const WORK_DIR: &str = "/opt/aas-control";
 pub const KBS_CONFIG_FILE: &str = "kbs-config.json";
 pub const AS_CONFIG_FILE: &str = "as-config.json";
 pub const QCNL_CONFIG_FILE: &str = "sgx_default_qcnl.conf";
-pub const AAS_CLIENT_FILE: &str = "aas-client.tar.gz";
 
 // DataBase URL
-pub const DATABASE_URL: &str = "mysql://localhost/user-db";
+pub const DATABASE_URL: &str = "mysql://localhost/aas_control";
 
 #[actix_web::main] // or #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -62,10 +61,17 @@ async fn main() -> std::io::Result<()> {
         format!("{WORK_DIR}/docker-compose.yml"),
         std::include_str!("../../scripts/docker-compose.yml").to_string(),
     )?;
-    std::fs::write(
-        format!("{WORK_DIR}/{AAS_CLIENT_FILE}"),
-        std::include_bytes!("../../static/aas-client.tar.gz").to_vec(),
-    )?;
+    let cp_client_output = std::process::Command::new("cp")
+        .arg("-r")
+        .arg("./static/aas_client")
+        .arg(format!("{WORK_DIR}/"))
+        .output()?;
+    if !cp_client_output.status.success() {
+        panic!(
+            "Copy client static directory failed: {}",
+            String::from_utf8_lossy(&cp_client_output.stderr)
+        );
+    }
     std::fs::write(
         format!("{WORK_DIR}/guide.html"),
         std::include_str!("../../static/guide.html").to_string(),
@@ -94,7 +100,12 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::clone(&sessions))
             .service(start)
             .service(redirect)
-            .route("/aas-client", web::get().to(download_aas_client))
+            .route("/aas-client-csv", web::get().to(download_aas_client_csv))
+            .route("/aas-client-snp", web::get().to(download_aas_client_snp))
+            .route(
+                "/aas-client-intel",
+                web::get().to(download_aas_client_intel),
+            )
             .route("/guide", web::get().to(get_guide))
     })
     .bind(("0.0.0.0", 7001))?

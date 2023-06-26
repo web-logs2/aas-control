@@ -2,7 +2,7 @@
 # see https://diesel.rs/guides/configuring-diesel-cli
 
 [print_schema]
-file = "app/src/db/schema.rs"
+file = "service/src/db/schema.rs"
 with_docs = true
 
 [migrations_directory]

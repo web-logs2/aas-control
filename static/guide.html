@@ -11,11 +11,12 @@
 
 <main>
 <h1 id="openanolis-">OpenAnolis远程证明服务配置与测试</h1>
-<h2 id="-">先决条件</h2>
+<p>更新日期：2023-6-26</p>
+<h1 id="-">先决条件</h1>
 <ol>
-<li><p>登录OpenAnolis账号并获取OpenAnolis远程证明服务 (AAS) 实例，若还未创建，请点击<a href="http://aas-control.openanolis.cn">这里</a>.
+<li><p>登录OpenAnolis账号并获取OpenAnolis远程证明服务 (AAS) 实例，若还未创建，请点击<a href="http://attestation.openanolis.cn">这里</a>.
 在创建实例完成后，会获得AAS实例的URL地址，本文档中以下述URL地址为例：</p>
-<pre><code><span class="hljs-symbol">http:</span><span class="hljs-comment">//aas-control.openanolis.cn/1234567</span>
+<pre><code><span class="hljs-symbol">http:</span><span class="hljs-comment">//attestation.openanolis.cn/1234567</span>
 </code></pre><p>创建完成后还会获得一个认证密钥，请将密钥写入本地文件备用，例如:</p>
 <pre><code>cat&gt;/etc/aas-auth.<span class="hljs-built_in">key</span>&lt;&lt;<span class="hljs-built_in">EOF</span>
 -----BEGIN PRIVATE <span class="hljs-built_in">KEY</span>-----
@@ -23,23 +24,118 @@ MC4CAQAwBQYDK2VwBCIEIPxQzuqDpOTq2KuMAdQhZjmAegDVrjCKk0DnibQQqS1e
 -----<span class="hljs-keyword">END</span> PRIVATE <span class="hljs-built_in">KEY</span>-----
 <span class="hljs-built_in">EOF</span>
 </code></pre></li>
-<li><p>下载并安装AAS-Client命令行工具，龙蜥社区为OpenAnolis OS提供了rpm安装包，请点击<a href="http://aas-control.openanolis.cn/aas-client">这里</a>下载.</p>
+<li><p>下载并安装AAS-Client命令行工具，龙蜥社区为OpenAnolis OS提供了二进制文件，请点击<a href="http://attestation.openanolis.cn/aas-client">这里</a>下载.</p>
 </li>
 </ol>
-<h2 id="attestation">Attestation</h2>
+<h1 id="attestation">Attestation</h1>
 <p>在一个真实可信硬件的TEE中运行client，进行attestation测试：</p>
-<pre><code>aas-<span class="hljs-keyword">client</span> --url http:<span class="hljs-comment">//aas-control.openanolis.cn/1234567 attest</span>
-</code></pre><p>请注意将url参数替换为您的AAS实例URL.</p>
-<p>这行命令将会在TEE搜集远程证明证据，并向AAS发起认证请求，在请求通过后，返回一个包含了证据验证结果且被签名的JWT令牌，而证据验证结果中包含了从证据中解析出的表征TEE可信度的重要内容，例如硬件安全版本号，软件度量值等等。</p>
+<pre><code class="lang-shell">aas-<span class="hljs-keyword">client</span> --url http:<span class="hljs-comment">//attestation.openanolis.cn/1234567 attest</span>
+</code></pre>
+<p>请注意将url参数替换为您的AAS实例URL.</p>
+<p>这行命令将会在TEE搜集远程证明证据，并向AAS发起认证请求，在请求通过后，返回一个包含了证据验证结果且被签名的JWT令牌（Base64编码），而证据验证结果中包含了从证据中解析出的表征TEE可信度的重要内容，例如硬件安全版本号，软件度量值等等。</p>
 <p><strong>注：</strong>若暂时没有真实硬件上的TEE环境，可以设置如下环境变量后再运行aas-client，以使用Sample TEE类型来测试AAS的Attestation功能：</p>
-<pre><code><span class="hljs-keyword">export</span> AA_SAMPLE_ATTESTER_TEST=<span class="hljs-literal">yes</span>
-</code></pre><h3 id="-">获取令牌验证公钥</h3>
+<pre><code class="lang-shell"><span class="hljs-keyword">export</span> AA_SAMPLE_ATTESTER_TEST=<span class="hljs-literal">yes</span>
+</code></pre>
+<p>当前支持的TEE平台类型包括：</p>
+<ul>
+<li>Intel TDX</li>
+<li>Intel SGX Occlum</li>
+<li>AMD SEV-SNP</li>
+</ul>
+<h2 id="-">获取令牌验证公钥</h2>
 <p>通过如下命令从AAS获取用于验证令牌签名的公钥：</p>
-<pre><code>curl -k -X GET http:<span class="hljs-regexp">//</span>aas-control.openanolis.cn<span class="hljs-regexp">/1234567/</span>kbs<span class="hljs-regexp">/v0/</span>token-certificate-chain
+<pre><code>curl -k -X GET http:<span class="hljs-regexp">//</span>attestation.openanolis.cn<span class="hljs-regexp">/1234567/</span>kbs<span class="hljs-regexp">/v0/</span>token-certificate-chain
 </code></pre><p>这会返回一个JWKS格式的公钥，并包含自签名的x.509格式证书。</p>
-<h3 id="-attestation-">设置自定义Attestation策略 (可选)</h3>
+<h2 id="-attestation-">设置自定义Attestation策略</h2>
 <p>可以通过如下命令设置自定义的Attestation策略（rego语法），以在硬件厂商要求的基本的默认证据验证策略之外，附加上所需要的进一步的证据内容检查：</p>
-<pre><code><span class="hljs-string">aas-client </span><span class="hljs-string">config </span><span class="hljs-built_in">--auth-private-key</span> /<span class="hljs-string">etc/</span><span class="hljs-string">aas-auth.</span><span class="hljs-string">key </span><span class="hljs-built_in">set-attestation-policy</span> <span class="hljs-built_in">--type</span> <span class="hljs-string">rego </span><span class="hljs-built_in">--id</span> <span class="hljs-string">default </span><span class="hljs-built_in">--policy-file</span> /<span class="hljs-string">path/</span><span class="hljs-string">to/</span><span class="hljs-string">policy.</span><span class="hljs-string">rego</span>
-</code></pre><p>请注意将<code>/etc/aas-auth.key</code>替换为您的认证密钥，将<code>/path/to/policy.rego</code>替换为策略文件的路径.</p>
-<p>若不设置自定义策略，则AAS不会在硬件厂商默认策略之外做更多的证据验证检查。</p>
+<pre><code class="lang-shell"><span class="hljs-string">aas-client </span><span class="hljs-built_in">--url</span> <span class="hljs-string">http:</span>//<span class="hljs-string">aas-control.</span><span class="hljs-string">openanolis.</span><span class="hljs-string">cn/</span><span class="hljs-string">1234567 </span><span class="hljs-string">config </span><span class="hljs-built_in">--auth-private-key</span> /<span class="hljs-string">etc/</span><span class="hljs-string">aas-auth.</span><span class="hljs-string">key </span><span class="hljs-built_in">set-attestation-policy</span> <span class="hljs-built_in">--type</span> <span class="hljs-string">rego </span><span class="hljs-built_in">--id</span> <span class="hljs-string">default </span><span class="hljs-built_in">--policy-file</span> /<span class="hljs-string">path/</span><span class="hljs-string">to/</span><span class="hljs-string">policy.</span><span class="hljs-string">rego</span>
+</code></pre>
+<p>请注意将<code>/etc/aas-auth.key</code>替换为您的认证密钥，将<code>/path/to/policy.rego</code>替换为策略文件的路径.</p>
+<p>若不设置自定义策略，则AAS仅会根据硬件厂商的默认策略检查TEE证据（未来龙蜥社区会考虑提供社区的安全基线策略）。</p>
+<h3 id="-">基础策略模版</h3>
+<p>在自定义策略文件中，可以对每一类TEE的TCB状态和度量值做额外的限制检查，例如要求TDX Quote中的<code>tcb_svn</code>和<code>mr_td</code>字段必须是几个给定的参考值中的一个，则可以设置策略如下：</p>
+<p>my_policy.rego</p>
+<pre><code>package my_policy
+
+<span class="hljs-built_in">import</span> future.keywords.<span class="hljs-keyword">if</span>
+
+default <span class="hljs-attr">allow</span> = <span class="hljs-literal">false</span>
+
+<span class="hljs-comment"># The allowed reference values for the specific field in the quote</span>
+<span class="hljs-attr">reference_tdx_tcb_svn</span> = [ <span class="hljs-string">"03000500000000000000000000000000"</span> ]
+<span class="hljs-attr">reference_tdx_mr_td</span> = [ <span class="hljs-string">"abcd1234"</span>, <span class="hljs-string">"1234abcd"</span>, <span class="hljs-string">"a1b2c3d4"</span> ]
+
+allow <span class="hljs-keyword">if</span> {
+    input[<span class="hljs-string">"tdx.quote.body.tcb_svn"</span>] == reference_tdx_tcb_svn[_]
+    input[<span class="hljs-string">"tdx.quote.body.mr_td"</span>] == reference_tdx_mrtd[_]
+}
+</code></pre><p>上述策略是对证据内容做出限制的基础模版，如果您不熟悉OPA策略引擎的rego语法，则可以直接修改上述模版添加更多的对证据内容字段的检查策略。
+同时，AAS允许精通OPA策略rego语法的用户自行编写策略文件以实现任何想要的复杂策略逻辑。</p>
+<p>AAS允许您在同一份策略文件中同时添加不同类型TEE的证据内容字段的检查策略。这些字段在解析出的序列化证据内容中有不同的名称，我们将每一类TEE所支持的证据内容字段名称列出如下：</p>
+<h4 id="intel-tdx">Intel TDX</h4>
+<pre><code>"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.header</span><span class="hljs-selector-class">.version</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.header</span><span class="hljs-selector-class">.att_key_type</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.header</span><span class="hljs-selector-class">.tee_type</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.header</span><span class="hljs-selector-class">.reserved</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.header</span><span class="hljs-selector-class">.vendor_id</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.header</span><span class="hljs-selector-class">.user_data</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.body</span><span class="hljs-selector-class">.mr_config_id</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.body</span><span class="hljs-selector-class">.mr_owner</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.body</span><span class="hljs-selector-class">.mr_owner_config</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.body</span><span class="hljs-selector-class">.mr_td</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.body</span><span class="hljs-selector-class">.mrsigner_seam</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.body</span><span class="hljs-selector-class">.report_data</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.body</span><span class="hljs-selector-class">.seam_attributes</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.body</span><span class="hljs-selector-class">.td_attributes</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.body</span><span class="hljs-selector-class">.mr_seam</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.body</span><span class="hljs-selector-class">.tcb_svn</span>"
+"<span class="hljs-selector-tag">tdx</span><span class="hljs-selector-class">.quote</span><span class="hljs-selector-class">.body</span><span class="hljs-selector-class">.xfam</span>"
+</code></pre><h4 id="intel-sgx-occlum">Intel SGX Occlum</h4>
+<pre><code><span class="hljs-string">"sgx.mr-signer"</span>
+<span class="hljs-string">"sgx.mr-enclave"</span>
+</code></pre><h4 id="amd-sev-snp">AMD SEV-SNP</h4>
+<pre><code><span class="hljs-string">"snp.policy_abi_major"</span>
+<span class="hljs-string">"snp.policy_abi_minor"</span>
+<span class="hljs-string">"snp.policy_smt_allowed"</span>
+<span class="hljs-string">"snp.policy_migrate_ma"</span>
+<span class="hljs-string">"snp.policy_debug_allowed"</span>
+<span class="hljs-string">"snp.policy_single_socket"</span>
+<span class="hljs-string">"snp.policy_single_socket"</span>
+<span class="hljs-string">"snp.reported_tcb_bootloader"</span>
+<span class="hljs-string">"snp.reported_tcb_tee"</span>
+<span class="hljs-string">"snp.reported_tcb_snp"</span>
+<span class="hljs-string">"snp.reported_tcb_microcode"</span>
+<span class="hljs-string">"snp.platform_tsme_enabled"</span>
+<span class="hljs-string">"snp.platform_smt_enabled"</span>
+<span class="hljs-string">"snp.measurement"</span>
+</code></pre><h1 id="-">机密数据托管</h1>
+<p>AAS基于TEE Attestation为社区用户提供了机密数据的上传和托管功能服务，以方便向运行时的TEE安全地注入机密数据。
+TEE内的应用程序可使用AAS-Client向AAS实例发起数据获取请求，请求过程中强制执行AAS的TEE Attestation过程，完成对TEE真实性的验证，
+并在验证通过后，向TEE返回加密的机密数据内容（解密密钥为TEE私钥）。</p>
+<h2 id="-">上传机密数据</h2>
+<p>在本地准备机密数据文件：</p>
+<pre><code class="lang-shell">cat &lt;&lt; <span class="hljs-literal">EOF</span> &gt; key_data.txt
+<span class="hljs-number">1234567890</span>
+<span class="hljs-literal">EOF</span>
+</code></pre>
+<p>为机密数据设置唯一的tag标识：AAS规定为机密数据设置的tag格式为<code>[top_tag]/[middle_tag]/[tag]</code>, 例如可以为一个解密密钥分配tag: <code>decryption_key/rsa_pub/key_1</code></p>
+<p>上传机密资源：</p>
+<pre><code class="lang-shell"><span class="hljs-string">aas-client </span><span class="hljs-built_in">--url</span> <span class="hljs-string">http:</span>//<span class="hljs-string">aas-control.</span><span class="hljs-string">openanolis.</span><span class="hljs-string">cn/</span><span class="hljs-string">1234567 </span><span class="hljs-string">config </span><span class="hljs-built_in">--auth-private-key</span> /<span class="hljs-string">etc/</span><span class="hljs-string">aas-auth.</span><span class="hljs-string">key </span><span class="hljs-built_in">set-resource</span> <span class="hljs-built_in">--resource-file</span> <span class="hljs-string">key_data.</span><span class="hljs-string">txt </span><span class="hljs-built_in">--path</span> <span class="hljs-string">decryption_key/</span><span class="hljs-string">rsa_pub/</span><span class="hljs-string">key_1</span>
+</code></pre>
+<p>上述命令样例中，我们将本地的<code>key_data.txt</code>文件中的机密数据上传到了AAS实例中，并为其分配了路径标识<code>decryption_key/rsa_pub/key_1</code>.</p>
+<h2 id="-">获取机密数据</h2>
+<p>机密数据的获取过程要求执行TEE Attestation，因此请求方需运行在真实可信的硬件TEE中。</p>
+<p>AAS-Client Tool提供了获取机密数据的功能：</p>
+<pre><code class="lang-shell"><span class="hljs-string">aas-client </span><span class="hljs-built_in">--url</span> <span class="hljs-string">http:</span>//<span class="hljs-string">aas-control.</span><span class="hljs-string">openanolis.</span><span class="hljs-string">cn/</span><span class="hljs-string">1234567 </span><span class="hljs-built_in">get-resource</span> <span class="hljs-built_in">--path</span> <span class="hljs-string">decryption_key/</span><span class="hljs-string">rsa_pub/</span><span class="hljs-string">key_1</span>
+</code></pre>
+<p>上述命令会将获取到的Base64编码的机密数据明文内容打印出来。</p>
+
+<br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>
+<footer>
+    <p>&copy; 2023 OpenAnolis</p>
+</footer>
 </main>
+<br/>
+<br/>
+<br/>
+<br/>

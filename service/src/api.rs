@@ -19,7 +19,11 @@ use std::time::SystemTime;
 use tokio::sync::Mutex;
 
 use crate::cleanup::DURATION_HOURS;
-use crate::{AAS_CLIENT_FILE, SERVER_KEY, TOKEN_COOKIE_ID, USER_INFO_API_URL, WORK_DIR};
+use crate::{SERVER_KEY, TOKEN_COOKIE_ID, USER_INFO_API_URL, WORK_DIR};
+
+const AAS_CLIENT_FILE_CSV: &str = "aas_client_an8_csv_0.1.0.tar.gz";
+const AAS_CLIENT_FILE_SNP: &str = "aas_client_an8_snp_0.1.0.tar.gz";
+const AAS_CLIENT_FILE_INTEL: &str = "aas_client_an8_intel_0.1.0.tar.gz";
 
 macro_rules! bail_error_internal {
     ($error: expr) => {
@@ -178,8 +182,16 @@ pub(crate) async fn start(map: web::Data<SessionMap<'_>>) -> HttpResponse {
     response
 }
 
-pub(crate) async fn download_aas_client() -> NamedFile {
-    NamedFile::open(format!("{WORK_DIR}/{AAS_CLIENT_FILE}")).unwrap()
+pub(crate) async fn download_aas_client_csv() -> NamedFile {
+    NamedFile::open(format!("{WORK_DIR}/aas_client/{AAS_CLIENT_FILE_CSV}")).unwrap()
+}
+
+pub(crate) async fn download_aas_client_snp() -> NamedFile {
+    NamedFile::open(format!("{WORK_DIR}/aas_client/{AAS_CLIENT_FILE_SNP}")).unwrap()
+}
+
+pub(crate) async fn download_aas_client_intel() -> NamedFile {
+    NamedFile::open(format!("{WORK_DIR}/aas_client/{AAS_CLIENT_FILE_INTEL}")).unwrap()
 }
 
 pub(crate) async fn get_guide() -> NamedFile {
