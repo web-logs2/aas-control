@@ -14,6 +14,7 @@ use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde_json::json;
 use sha2::{Digest, Sha256};
+use std::io::BufRead;
 use std::sync::Arc;
 use std::time::SystemTime;
 use tokio::sync::Mutex;
@@ -87,6 +88,30 @@ pub(crate) async fn redirect(
     };
 
     let new_user: NewUser = bail_error_internal!(get_user_info(token).await);
+
+    // !!!
+    // Check if the user is on the test invitation list:
+    let invit_list_file = bail_error_internal!(std::fs::File::open(format!(
+        "{WORK_DIR}/invitation_list.conf"
+    )));
+    let reader = std::io::BufReader::new(invit_list_file);
+    let invit_list: Vec<String> = reader
+        .lines()
+        .filter_map(|line| {
+            let line = line.ok()?;
+            if line.is_empty() || line.starts_with('#') {
+                None
+            } else {
+                Some(line)
+            }
+        })
+        .collect();
+    println!("{:?}", invit_list);
+    if !invit_list.contains(&new_user.email) {
+        unauthorized!("Sorry, you are currently not eligible for AAS testing.");
+    }
+    // !!!
+
     session.set_user_no(new_user.userno.clone());
 
     let mut db_connection = bail_error_internal!(db_connection_pool.get());

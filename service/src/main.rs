@@ -76,6 +76,10 @@ async fn main() -> std::io::Result<()> {
         format!("{WORK_DIR}/guide.html"),
         std::include_str!("../../static/guide.html").to_string(),
     )?;
+    std::fs::write(
+        format!("{WORK_DIR}/invitation_list.conf"),
+        std::include_str!("../../static/invitation_list.conf").to_string(),
+    )?;
 
     let sessions = web::Data::new(SessionMap::new());
     let db_connection_pool = db::get_connection_pool().unwrap();
