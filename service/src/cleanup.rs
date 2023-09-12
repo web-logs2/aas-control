@@ -14,7 +14,7 @@ use std::sync::Arc;
 use time::{Duration, OffsetDateTime, PrimitiveDateTime};
 
 #[allow(dead_code)]
-pub const DURATION_HOURS: i64 = 2;
+pub const DURATION_HOURS: i64 = 24;
 
 pub async fn cleanup(db_connection_pool: MysqlPool) -> Result<()> {
     let mut db_connection = db_connection_pool.get()?;
